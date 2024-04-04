@@ -9,41 +9,57 @@ PATTERN="*.gcode"
 # For Raspberry Pi use
 DESTINATION="/home/pi/printer_data/gcodes"
 
+ACTION=${1:-}
+device=${2:-}
 
-# The block device name is expected to be passed as the first argument.
-device="$1"
+do_mount() {
+  # The block device name is expected to be passed as the first argument.
 
-if [ -z "$device" ]; then
-  echo "Missing block device name!" >>/tmp/mountcopy.log
-  exit 1
-fi
+  if [ -z "$device" ]; then
+    echo "Missing block device name!" >>/tmp/mountcopy.log
+    exit 1
+  fi
 
-# Temporary directory where we will mount the filesystem
-mnt=$(mktemp -d)
-# Strange error codes are for debugging purposes.
-# Mount device into filesystem at $destination.
-mount "/dev/$device" "$mnt" 2>>/tmp/mountcopy.log || exit 106
+  # Temporary directory where we will mount the filesystem
+  mnt=$(mktemp -d)
+  # Strange error codes are for debugging purposes.
+  # Mount device into filesystem at $destination.
+  mount "/dev/$device" "$mnt" 2>>/tmp/mountcopy.log || exit 106
 
-# The copied files will belong to root, but we will grant all permissions to other users.
-umask 0111
+  # The copied files will belong to root, but we will grant all permissions to other users.
+  umask 0111
 
-# Clean log file
-echo "" > /tmp/mountcopy.log
-# Determine wither we should export or import files
-if [ -z "$(ls $(echo "${mnt}/${PATTERN}"))" ]; then
-  # NO FILES, WE EXPORT
-  echo "Exporting..." >>/tmp/mountcopy.log
-  # Copy files fitting $PATTERN from the $DESTINATION to the root of the drive.
-  mv $(echo "${DESTINATION}/${PATTERN}") "$mnt/" 2>>/tmp/mountcopy.log || exit 105
+  # Clean log file
+  echo "" > /tmp/mountcopy.log
+  # Determine wither we should export or import files
+  if [ -z "$(ls $(echo "${mnt}/${PATTERN}"))" ]; then
+    # NO FILES, WE EXPORT
+    echo "Exporting..." >>/tmp/mountcopy.log
+    # Copy files fitting $PATTERN from the $DESTINATION to the root of the drive.
+    mv $(echo "${DESTINATION}/${PATTERN}") "$mnt/" 2>>/tmp/mountcopy.log || exit 105
+  else
+    # FILES FOUND, WE IMPORT
+    echo "Importing..." >>/tmp/mountcopy.log
+    # Copy files fitting $PATTERN from the root of the drive to $DESTINATION.
+    cp $(echo "$mnt/$PATTERN") "$DESTINATION/" 2>>/tmp/mountcopy.log || exit 102
+  fi
+}
 
-else
-  # FILES FOUND, WE IMPORT
-  echo "Importing..." >>/tmp/mountcopy.log
-  # Copy files fitting $PATTERN from the root of the drive to $DESTINATION.
-  cp $(echo "$mnt/$PATTERN") "$DESTINATION/" 2>>/tmp/mountcopy.log || exit 102
-fi
+do_unmount() {
+    $log "Removing: ${DEVICE}-${ID_FS_LABEL:-}-${DEVBASE}"
+    MOUNT_POINT=$(/bin/mount | /bin/egrep "^${DEVICE}" | /usr/bin/awk '{ print $3 }')
+    if [[ -z ${MOUNT_POINT} ]]; then
+        $log "Предупреждение: ${DEVICE} не примонтировано"
+    else
+        /bin/umount -l ${DEVICE}
+        $log "**** Отмонтировано ${DEVICE} **** Удаление точки монтирования ${MOUNT_POINT} и записи в /etc/fstab"
+    fi
+    [ -d "$MOUNT_POINT" ] && /bin/rmdir "$MOUNT_POINT"
+    sed -i "/^${DEVICE//\//\\/}\s\+${MOUNT_POINT//\//\\/}/d" /etc/fstab
+}
 
-# Unmount the drives filesystem
-umount "$mnt" 2>>/tmp/mountcopy.log || exit 103
-# Remove temporary mount directory
-rmdir "$mnt" 2>>/tmp/mountcopy.log || exit 104
+case "${ACTION}" in
+    add) do_mount ;;
+    remove) do_unmount ;;
+    *) usage ;;
+esac
