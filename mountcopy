@@ -22,7 +22,6 @@ do_mount() {
   mnt=$(mktemp -d)
   filesystem=$(lsblk -no FSTYPE "/dev/$device")
 
-  # Проверяем тип файловой системы и монтируем устройство соответствующим образом
   if [ "$filesystem" = "vfat" ]; then
       mount -t vfat -o codepage=866,iocharset=cp1251 "/dev/$device" "$mnt" 2>>/tmp/mountcopy.log || exit 106
   elif [ "$filesystem" = "exfat" ]; then
