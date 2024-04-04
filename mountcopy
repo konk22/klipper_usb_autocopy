@@ -20,7 +20,7 @@ do_mount() {
   fi
 
   mnt=$(mktemp -d)
-  mount "/dev/$device" "$mnt" 2>>/tmp/mountcopy.log || exit 106
+  mount -t vfat -o codepage=866,iocharset=utf8 "/dev/$device" "$mnt" 2>>/tmp/mountcopy.log || exit 106
 
   umask 0111
 
