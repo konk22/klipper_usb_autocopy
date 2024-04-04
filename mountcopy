@@ -20,7 +20,19 @@ do_mount() {
   fi
 
   mnt=$(mktemp -d)
-  mount -t vfat -o codepage=866,iocharset=utf8 "/dev/$device" "$mnt" 2>>/tmp/mountcopy.log || exit 106
+  filesystem=$(lsblk -no FSTYPE "/dev/$device")
+
+  # Проверяем тип файловой системы и монтируем устройство соответствующим образом
+  if [ "$filesystem" = "vfat" ]; then
+      mount -t vfat -o codepage=866,iocharset=cp1251 "/dev/$device" "$mnt" 2>>/tmp/mountcopy.log || exit 106
+  elif [ "$filesystem" = "exfat" ]; then
+      mount -t exfat -o utf8 "/dev/$device" "$mnt" 2>>/tmp/mountcopy.log || exit 106
+  elif [ "$filesystem" = "ntfs" ] || [ "$filesystem" = "ntfs-3g" ]; then
+      mount -t ntfs-3g -o nls=utf8,umask=007,gid=46 "/dev/$device" "$mnt" 2>>/tmp/mountcopy.log || exit 106
+  else
+      echo "Unsupported filesystem: $filesystem">>/tmp/mountcopy.log || exit 106
+      exit 107
+  fi
 
   umask 0111
 
