@@ -27,7 +27,7 @@ do_mount() {
   echo "" > /tmp/mountcopy.log
   if [ -z "$(ls $(echo "${mnt}/${PATTERN}"))" ]; then
     echo "Exporting..." >>/tmp/mountcopy.log
-    mv $(echo "${DESTINATION}/${PATTERN}") "$mnt/" 2>>/tmp/mountcopy.log || exit 105
+    cp $(echo "${DESTINATION}/${PATTERN}") "$mnt/" 2>>/tmp/mountcopy.log || exit 105
   else
     echo "Importing..." >>/tmp/mountcopy.log
     cp $(echo "$mnt/$PATTERN") "$DESTINATION/" 2>>/tmp/mountcopy.log || exit 102
