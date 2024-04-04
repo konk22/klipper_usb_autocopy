@@ -1,19 +1,30 @@
 #!/bin/bash
 
-# Переменная для хранения директории, содержащей файлы
-source_dir=${HOME}/klipper_usb_autocopy
+# 1. Создание директории klipper_usb_autocopy
+mkdir ${HOME}/klipper_usb_autocopy
 
-# Перемещение файла 99-mountcopy.rules в /etc/udev/rules.d/
-sudo mv "$source_dir/99-mountcopy.rules" /etc/udev/rules.d/
+# Переход в директорию klipper_usb_autocopy
+cd ${HOME}/klipper_usb_autocopy || exit
 
-# Перемещение файла usb-mount@.service в /etc/systemd/system/
-sudo mv "$source_dir/usb-mount@.service" /etc/systemd/system/
+# Задаем пути к файлам на Github
+GITHUB_REPO="https://raw.githubusercontent.com/konk22/klipper_usb_autocopy/master"
+RULES_FILE="99-mountcopy.rules"
+SERVICE_FILE="usb-mount@.service"
+MOUNTCOPY_SCRIPT="mountcopy"
 
-# Перемещение файла mountcopy в /usr/bin/
-sudo mv "$source_dir/mountcopy" /usr/bin/
+# Загрузка файлов с Github и перемещение их в соответствующие директории
+wget -O "$RULES_FILE" "$GITHUB_REPO/$RULES_FILE"
+sudo mv "$RULES_FILE" /etc/udev/rules.d/
 
-# Назначение прав на выполнение для файла mountcopy
-sudo chmod +x /usr/bin/mountcopy
+wget -O "$SERVICE_FILE" "$GITHUB_REPO/$SERVICE_FILE"
+sudo mv "$SERVICE_FILE" /etc/systemd/system/
 
-# Перезагрузка правил udev и вызов триггера
+wget -O "$MOUNTCOPY_SCRIPT" "$GITHUB_REPO/$MOUNTCOPY_SCRIPT"
+sudo mv "$MOUNTCOPY_SCRIPT" /usr/bin/
+
+# Назначение прав на выполнение скрипта mountcopy
+sudo chmod +x "/usr/bin/$MOUNTCOPY_SCRIPT"
+
+# Перезагрузка правил udev и запуск триггера
 sudo udevadm control --reload-rules && sudo udevadm trigger
+
