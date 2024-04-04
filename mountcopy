@@ -13,34 +13,23 @@ ACTION=${1:-}
 device=${2:-}
 
 do_mount() {
-  # The block device name is expected to be passed as the first argument.
 
   if [ -z "$device" ]; then
     echo "Missing block device name!" >>/tmp/mountcopy.log
     exit 1
   fi
 
-  # Temporary directory where we will mount the filesystem
   mnt=$(mktemp -d)
-  # Strange error codes are for debugging purposes.
-  # Mount device into filesystem at $destination.
   mount "/dev/$device" "$mnt" 2>>/tmp/mountcopy.log || exit 106
 
-  # The copied files will belong to root, but we will grant all permissions to other users.
   umask 0111
 
-  # Clean log file
   echo "" > /tmp/mountcopy.log
-  # Determine wither we should export or import files
   if [ -z "$(ls $(echo "${mnt}/${PATTERN}"))" ]; then
-    # NO FILES, WE EXPORT
     echo "Exporting..." >>/tmp/mountcopy.log
-    # Copy files fitting $PATTERN from the $DESTINATION to the root of the drive.
     mv $(echo "${DESTINATION}/${PATTERN}") "$mnt/" 2>>/tmp/mountcopy.log || exit 105
   else
-    # FILES FOUND, WE IMPORT
     echo "Importing..." >>/tmp/mountcopy.log
-    # Copy files fitting $PATTERN from the root of the drive to $DESTINATION.
     cp $(echo "$mnt/$PATTERN") "$DESTINATION/" 2>>/tmp/mountcopy.log || exit 102
   fi
 }
